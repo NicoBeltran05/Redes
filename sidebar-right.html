@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport"    content="width=device-width, initial-scale=1.0">
+	<meta name="description" content="">
+	<meta name="author"      content="Sergey Pozhilov (GetTemplate.com)">
+	
+	<title>Calculadora</title>
+
+	<link rel="shortcut icon" href="assets/images/gt_favicon.png">
+	
+	<link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.no-icons.min.css" rel="stylesheet">
+	<link href="http://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+	<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Alice|Open+Sans:400,300,700">
+	<link rel="stylesheet" href="assets/css/styles.css">
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Calculadora de Nicolas Beltran</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f9fc;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+        }
+        h1 {
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #28a745;
+        }
+    </style>
+</head>
+</head>
+<body>
+    <div class="navbar-collapse collapse">
+				
+        <ul class="nav navbar-nav">
+            <li class="active"><a href="index.html">Home</a></li>
+            <li><a href="about.html">About</a></li>
+        </ul>
+    <div class="container">
+        <h1>Calculadora de Nicolas Beltran</h1>
+        <form id="calculadoraForm">
+            <label for="cidr">Dirección IP/Máscara:</label>
+            <input type="text" id="cidr" placeholder="Ejemplo: 192.168.1.0/24" required>
+
+            <button type="button" class="btn" onclick="calcularSubred()">Calcular</button>
+        </form>
+
+        <div class="result" id="resultado"></div>
+    </div>
+
+    <script>
+        function ipToArray(ip) {
+            return ip.split('.').map(Number);
+        }
+
+        function arrayToIp(arr) {
+            return arr.join('.');
+        }
+
+        function bitsToMascara(bits) {
+            let mascaraBinaria = '1'.repeat(bits).padEnd(32, '0');
+            let mascaraArray = [];
+            for (let i = 0; i < 32; i += 8) {
+                mascaraArray.push(parseInt(mascaraBinaria.substring(i, i + 8), 2));
+            }
+            return mascaraArray;
+        }
+
+        function esIpPrivada(ipArray) {
+            const [octeto1, octeto2] = ipArray;
+            
+            if (octeto1 === 10) return true;
+            
+            if (octeto1 === 172 && (octeto2 >= 16 && octeto2 <= 31)) return true;
+            
+            if (octeto1 === 192 && octeto2 === 168) return true;
+            
+            return false;
+        }
+
+        function determinarClase(ipArray) {
+            const octeto1 = ipArray[0];
+
+            if (octeto1 >= 1 && octeto1 <= 127) return "Clase A";
+            if (octeto1 >= 128 && octeto1 <= 191) return "Clase B";
+            if (octeto1 >= 192 && octeto1 <= 223) return "Clase C";
+            
+            return "No es clase A, B o C";
+        }
+
+        function calcularSubred() {
+            const cidr = document.getElementById('cidr').value;
+
+            const [ip, bits] = cidr.split('/');
+            const ipArray = ipToArray(ip);
+            const numBits = parseInt(bits);
+            
+            if (ipArray.length !== 4 || isNaN(numBits) || numBits < 0 || numBits > 32) {
+                document.getElementById('resultado').innerText = "Por favor, ingresa una IP y máscara válidas en formato CIDR.";
+                return;
+            }
+
+            const esPrivada = esIpPrivada(ipArray) ? "Privada" : "Pública";
+
+            const claseIp = determinarClase(ipArray);
+
+            const mascaraArray = bitsToMascara(numBits);
+            const mascaraBin = mascaraArray.map(octeto => (octeto >>> 0).toString(2).padStart(8, '0')).join('');
+            const ipBin = ipArray.map(octeto => (octeto >>> 0).toString(2).padStart(8, '0')).join('');
+
+            const redBin = ipBin.split('').map((bit, i) => bit & mascaraBin[i]).join('');
+            const direccionRedArray = [];
+            for (let i = 0; i < 32; i += 8) {
+                direccionRedArray.push(parseInt(redBin.substring(i, i + 8), 2));
+            }
+            const direccionRed = arrayToIp(direccionRedArray);
+
+            const broadcastBin = redBin.slice(0, numBits) + '1'.repeat(32 - numBits);
+            const direccionBroadcastArray = [];
+            for (let i = 0; i < 32; i += 8) {
+                direccionBroadcastArray.push(parseInt(broadcastBin.substring(i, i + 8), 2));
+            }
+            const direccionBroadcast = arrayToIp(direccionBroadcastArray);
+
+            const primeraIpUtilArray = [...direccionRedArray];
+            primeraIpUtilArray[3] += 1; 
+            const primeraIpUtil = arrayToIp(primeraIpUtilArray);
+
+            const ultimaIpUtilArray = [...direccionBroadcastArray];
+            ultimaIpUtilArray[3] -= 1; 
+            const ultimaIpUtil = arrayToIp(ultimaIpUtilArray);
+
+            const bitsLibres = 32 - numBits;
+            const totalIpUtiles = Math.pow(2, bitsLibres) - 2; 
+
+            const porcionRedBinariaSimplificada = redBin.slice(0, numBits); 
+            const porcionHostBinaria = ipBin.slice(numBits); 
+
+            document.getElementById('resultado').innerHTML = `
+                <strong>Resultados:</strong><br>
+                Dirección de red: ${direccionRed}<br>
+                Primera IP útil: ${primeraIpUtil}<br>
+                Última IP útil: ${ultimaIpUtil}<br>
+                Dirección de broadcast: ${direccionBroadcast}<br>
+                Direcciones IP útiles: ${totalIpUtiles}<br>
+                Rango de IP útiles: ${primeraIpUtil} - ${ultimaIpUtil}<br>
+                Tipo de IP: ${esPrivada}<br>
+                Clase de IP: ${claseIp}<br>
+                Porción de red (binario): ${porcionRedBinariaSimplificada}<br>
+                Porción de host (binario): ${porcionHostBinaria}
+            `;
+        }
+    </script>
+
+</body>
+</html>
